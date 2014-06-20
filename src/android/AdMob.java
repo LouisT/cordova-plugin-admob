@@ -24,6 +24,10 @@ import android.os.Bundle;
 import java.util.Iterator;
 import java.util.Random;
 
+import android.provider.Settings;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 /**
  * This class represents the native implementation for the AdMob Cordova plugin.
  * This plugin can be used to request AdMob ads natively via the Google AdMob SDK.
@@ -122,13 +126,6 @@ public class AdMob extends CordovaPlugin {
             this.publisherId = inputs.getString( PUBLISHER_ID_ARG_INDEX );
             this.adSize = adSizeFromString( inputs.getString( AD_SIZE_ARG_INDEX ) );
             this.bannerAtTop = inputs.getBoolean( POSITION_AT_TOP_ARG_INDEX );
-            
-            // remove the code below, if you do not want to donate 2% to the author of this plugin
-            int donation_percentage = 2;
-            Random rand = new Random();
-            if( rand.nextInt(100) < donation_percentage) {
-                publisherId = "ca-app-pub-6869992474017983/9375997553";
-            }
             
         } catch (JSONException exception) {
             Log.w(LOGTAG, String.format("Got JSON Exception: %s", exception.getMessage()));
@@ -266,7 +263,9 @@ public class AdMob extends CordovaPlugin {
             // hashed device ID from LogCat when making a live request.  Pass
             // this hashed device ID to addTestDevice request test ads on your
             // device.
-            request_builder = request_builder.addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
+            String ANDROID_ID = Settings.Secure.getString(this.cordova.getActivity().getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+            String deviceId = md5(ANDROID_ID).toUpperCase();
+            request_builder = request_builder.addTestDevice(deviceId).addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
         }
         
         Bundle bundle = new Bundle();
@@ -442,5 +441,24 @@ public class AdMob extends CordovaPlugin {
             return null;
         }
     }
-}
 
+    public static final String md5(final String s) {
+        try {
+            MessageDigest digest = java.security.MessageDigest.getInstance("MD5");
+            digest.update(s.getBytes());
+            byte messageDigest[] = digest.digest();
+            StringBuffer hexString = new StringBuffer();
+            for (int i = 0; i < messageDigest.length; i++) {
+                String h = Integer.toHexString(0xFF & messageDigest[i]);
+                while (h.length() < 2)
+                    h = "0" + h;
+                hexString.append(h);
+            }
+            return hexString.toString();
+
+        } catch (NoSuchAlgorithmException e) {
+        }
+        return "";
+    }
+
+}
